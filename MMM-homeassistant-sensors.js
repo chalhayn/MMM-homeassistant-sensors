@@ -1,6 +1,6 @@
 /* MagicMirror² - MMM-homeassistant-sensors (front-end)
  * Token-auth compliant, with precision/map/unit overrides, composite-value handling,
- * and robust logging. Compatible with older Electron (no optional chaining).
+ * robust logging, and column classes for clean CSS control.
  */
 "use strict";
 
@@ -210,6 +210,7 @@ Module.register("MMM-homeassistant-sensors", {
   // ----- DOM -----
   getDom() {
     var wrapper = document.createElement("div");
+    wrapper.className = "mmm-ha-wrapper"; // for CSS targeting
 
     var header = document.createElement("header");
     header.textContent = this.config.title || "Home Assistant";
@@ -302,27 +303,30 @@ Module.register("MMM-homeassistant-sensors", {
     var tr = document.createElement("tr");
     if (blink) tr.classList.add("blink");
 
-    // Icon
-    var iconTd = tr.insertCell(-1);
-    iconTd.className = "align-left";
-    if (this.config.displaySymbol && mdiIconName) {
-      var i = document.createElement("i");
-      i.className = "mdi mdi-" + mdiIconName;
-      iconTd.appendChild(i);
+    // Icon column (only if we actually want to show icons or have an icon name)
+    if (this.config.displaySymbol) {
+      var iconTd = tr.insertCell(-1);
+      iconTd.classList.add("col-icon");
+      if (mdiIconName) {
+        var i = document.createElement("i");
+        i.className = "mdi mdi-" + mdiIconName;
+        iconTd.appendChild(i);
+      }
     }
 
     // Name
     var nameTd = tr.insertCell(-1);
+    nameTd.classList.add("col-name");
     nameTd.textContent = name;
 
     // Value
     var valTd = tr.insertCell(-1);
-    valTd.className = "align-left";
+    valTd.classList.add("col-value");
     valTd.textContent = value;
 
     // Unit
     var unitTd = tr.insertCell(-1);
-    unitTd.className = "align-left";
+    unitTd.classList.add("col-unit");
     unitTd.textContent = unit || "";
 
     return tr;
