@@ -2,7 +2,7 @@
 :root {
   --ha-blink-duration: 2.2s;        /* tweak speed */
   --ha-blink-min-opacity: 0.35;     /* how dim it gets at peak blink */
-  --ha-blink-color: #ff5252;         /* accent color for alert rows */
+  --ha-blink-color: #ff5252;        /* accent color for alert rows */
 }
 
 .mmm-ha-wrapper .blink {
@@ -30,34 +30,37 @@
     border-left: 3px solid var(--ha-blink-color);
   }
 }
-/* Layout + spacing */
+
+/* ---- Layout + spacing (uses column classes from _buildRow) ---- */
 .mmm-ha-wrapper table {
-  border-collapse: collapse;          /* remove built-in spacing */
+  border-collapse: collapse;
   table-layout: auto;
 }
+
 .mmm-ha-wrapper td {
-  padding: 0.15rem 0.5rem;            /* base padding */
+  padding: 0.15rem 0.5rem;
   vertical-align: middle;
-  white-space: nowrap;                 /* keep value & unit on one line */
+  white-space: nowrap;
 }
 
-/* Icon */
-.mmm-ha-wrapper tr td:nth-child(1) {  /* icon col */
+/* Icon column */
+.mmm-ha-wrapper td.col-icon {
   padding-right: 0.35rem;
   width: 1.25rem;
 }
 
-/* Name */
-.mmm-ha-wrapper tr td:nth-child(2) {  /* name col */
-  padding-right: 1.00rem;             /* EXTRA gap between name → number */
+/* Name column: add breathing room before numbers */
+.mmm-ha-wrapper td.col-name {
+  padding-right: 1.0rem;
 }
 
-/* Value */
-.mmm-ha-wrapper tr td:nth-child(3) {  /* value col */
-  padding-right: 0.15rem;             /* keep unit close to value */
+/* Value column: keep unit tight next to number, align numbers nicely */
+.mmm-ha-wrapper td.col-value {
+  padding-right: 0.15rem;
+  font-variant-numeric: tabular-nums; /* nicer alignment */
 }
 
-/* Unit */
-.mmm-ha-wrapper tr td:nth-child(4) {  /* unit col */
-  padding-left: 0.15rem;              /* snugs unit up against value */
+/* Unit column: nudge up against value */
+.mmm-ha-wrapper td.col-unit {
+  padding-left: 0.15rem;
 }
