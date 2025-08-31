@@ -317,7 +317,7 @@ Module.register("MMM-homeassistant-sensors", {
 
     // Value
     var valTd = tr.insertCell(-1);
-    valTd.className = "align-right";
+    valTd.className = "align-left";
     valTd.textContent = value;
 
     // Unit
