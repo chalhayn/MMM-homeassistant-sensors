@@ -50,7 +50,7 @@ Module.register("MMM-homeassistant-sensors", {
   getStyles() {
     // Ensure these paths exist in your module (or set displaySymbol:false).
     return [
-      "modules/MMM-homeassistant-sensors/MaterialDesign-Webfont-master/css/materialdesignicons.min.css",
+      "modules/MMM-homeassistant-sensors/MDI/css/materialdesignicons.min.css",
       "modules/MMM-homeassistant-sensors/hassio.css"
     ];
   },
