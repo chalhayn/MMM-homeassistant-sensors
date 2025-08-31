@@ -1,100 +1,85 @@
 # MMM-homeassistant-sensors
 
-This a module for the [MagicMirror](https://github.com/MichMich/MagicMirror/tree/develop).
-It can display information from [Home Assistant](https://home-assistant.io/) using the home assistant REST API.
+This is a module for the [MagicMirror²](https://github.com/MichMich/MagicMirror/tree/develop).
+It can display information from [Home Assistant](https://www.home-assistant.io/) using the Home Assistant REST API (token-based).
 
 ## Installation
 
-Navigate into your MagicMirror's `modules` folder and clone this repository:
-`cd ~/MagicMirror/modules && git clone https://github.com/leinich/MMM-homeassistant-sensors.git`
+Navigate into your MagicMirror's `modules` folder and clone this repository:  
+`cd ~/MagicMirror/modules && git clone https://github.com/chalhayn/MMM-homeassistant-sensors.git`
 
-If you want to use icons for the sensors download the `MaterialDesignIcons` webfont from https://github.com/Templarian/MaterialDesign-Webfont/archive/master.zip and unzip the folder:
-`cd ~/MagicMirror/modules/MMM-homeassistant-sensors && wget https://github.com/chalhayn/MaterialDesign-Webfont/archive/master.zip && unzip master.zip`
+If you want to use icons for the sensors, download the **MaterialDesignIcons** webfont and unzip it into the module folder:  
+`cd ~/MagicMirror/modules/MMM-homeassistant-sensors && wget -O mdi.zip https://github.com/Templarian/MaterialDesign-Webfont/archive/refs/heads/master.zip && unzip mdi.zip`
+
+> Ensure your module’s `getStyles()` path matches the extracted folder, e.g.  
+> `modules/MMM-homeassistant-sensors/MaterialDesign-Webfont-master/css/materialdesignicons.min.css`
+
+If your `node_helper.js` uses `node-fetch`, install it inside the module folder:
 
 ## Configuration
 
-It is very simple to set up this module, a sample configuration looks like this:
+It is very simple to set up this module; a sample configuration looks like this further below.
 
 ## Configuration Options
 
-| Option           | Description                                                                                                   |
-| ---------------- | ------------------------------------------------------------------------------------------------------------- |
-| `prettyName`     | Pretty print the name of each JSON key (remove camelCase and underscores). <br><br> **Default:** `true`       |
-| `stripName`      | Removes all keys before the printed key. <br><br>**Example:** `a.b.c` will print `c`.<br> **Default:** `true` |
-| `title`          | Title to display at the top of the module. <br><br> **Default:** `Home Assistant`                             |
-| `host`           | The hostname or ip adress of the home assistant instance. <br><br> **Default:** `REQUIRED hassio.local`       |
-| `port`           | port of homeassistant e.g. 443 for SSL. <br><br> **Default:** `8321`                                          |
-| `https`          | is SSL enabled on home assistant (true/false) <br><br> **Default:** `REQUIRED false`                          |
-| `token`          | The long lived token. <br><br> **Default:** `REQUIRED`                                                        |
-| `apipassword`    | Deprecated API password. <br><br> **Default:** ``                                                             |
-| `updateInterval` | The time between updates (In milliseconds). <br><br> **Default:** `300000 (5 minutes)`                        |
-| `selfsigned`     | allows self signed certificates/ less secure (true/false). <br><br> **Default:** `false`                      |
-| `debuglogging`   | Enable logging into /home/pi/.pm2/logs/mm-error.log (true/false). <br><br> **Default:** `false`               |
-| `values`         | Specify specific values from the json feed to only show what you need (entity_id).                            |
+| Option               | Description                                                                                                   |
+|----------------------|---------------------------------------------------------------------------------------------------------------|
+| `prettyName`         | Pretty print the name of each entity (split camelCase/underscores). <br><br> **Default:** `false`             |
+| `stripName`          | Remove the domain prefix (e.g., show `temperature` instead of `sensor.temperature`). <br><br> **Default:** `false` |
+| `title`              | Title to display at the top of the module. <br><br> **Default:** `Home Assistant`                             |
+| `host`               | The hostname or IP address of the Home Assistant instance. <br><br> **Default:** `homeassistant.local`        |
+| `port`               | Port of Home Assistant (use `8123` for default). <br><br> **Default:** `8123`                                 |
+| `https`              | Whether HTTPS is used to reach Home Assistant (`true`/`false`). <br><br> **Default:** `false`                 |
+| `token`              | **Required.** Long-Lived Access Token (create in HA user profile). <br><br> **Default:** `""`                 |
+| `apipassword`        | **Deprecated** legacy API password. Do not use. <br><br> **Default:** `""`                                    |
+| `updateInterval`     | Time between updates (milliseconds). <br><br> **Default:** `300000` (5 minutes)                               |
+| `rejectUnauthorized` | When `https: true`, set to `false` to allow self-signed certs (**less secure**). <br><br> **Default:** `true` |
+| `debuglogging`       | Verbose logging to console (`true`/`false`). <br><br> **Default:** `false`                                    |
+| `values`             | Array selecting specific entities/attributes to display (see table below).                                    |
 
 ## values option
 
-| Option           | Description                                                                                                                                                                                                 |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sensor`         | `entity_id` from Home Assistant. Please have a look at the states pages for the unique `entity_id` of your sensor                                                                                           |
-| `name`           | The name of the value to display. If you omit this, `friendly_name` from Home Assistant will be displayed.                                                                                                  |
-| `alertThreshold` | As soon as the measured value of the sensor exceeds the configured threshold, the entry will begin to 'blink'. <br><br> **Default:** `off`                                                                  |
-| `attributes`     | Array of sensor attributes to show. If not set, only show sensor state. If set, you can add as many attributes as you want, if you want to show the state as well add `'state'`. <br><br> **Default:** `[]` |
-| `icons`          | Icons object for the on/off status of sensor. see: [MaterialDesignIcons](https://materialdesignicons.com/)                                                                                                  |
+| Option           | Description                                                                                                                                                                                                  |
+|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `sensor`         | The Home Assistant `entity_id`. Use Developer Tools → “States” to copy the exact id.                                                                                                                         |
+| `name`           | The label to display. If omitted, the entity’s `friendly_name` is used.                                                                                                                                       |
+| `alertThreshold` | If the numeric **state** exceeds this value, the row will add a `blink` class. <br><br> **Default:** _off_                                                                                                    |
+| `attributes`     | Array of attributes to display instead of the plain state. Include `"state"` in the list if you also want to show the state. <br><br> **Default:** `[]`                                                      |
+| `icons`          | Icon hints for stateful rows. See: [MaterialDesignIcons](https://materialdesignicons.com/).                                                                                                                  |
+| `precision`      | If the state is numeric, format to `N` decimals (e.g., `1` → `74.3`).                                                                                                                                        |
+| `unitOverride`   | Force a unit string regardless of HA’s unit (e.g., `"°F"`, `"kWh"`).                                                                                                                                          |
+| `map`            | Map raw states to prettier labels (e.g., `{ "on": "Locked", "off": "Unlocked" }`).                                                                                                                           |
 
 ## icons option
 
-| Option         | Description                                                                        |
-| -------------- | ---------------------------------------------------------------------------------- |
-| `default`      | Default icon of the sensor. In case there is no on/off status, like processor use. |
-| `state_on`     | On status icon of the sensor                                                       |
-| `state_off`    | Off status icon of the sensor                                                      |
-| `state_open`   | Open status icon of the sensor                                                     |
-| `state_closed` | Closed status icon of the sensor                                                   |
+| Option         | Description                                                                 |
+|----------------|-----------------------------------------------------------------------------|
+| `default`      | Default icon (used if no state match).                                      |
+| `state_on`     | Icon when the state is `on`.                                                |
+| `state_off`    | Icon when the state is `off`.                                               |
+| `state_open`   | Icon when the state is `open`.                                              |
+| `state_closed` | Icon when the state is `closed`.                                            |
 
-Here is an example of an entry in `config.js`
+Here is an example of an entry in `config.js`:
 
-```
-modules: [{
-		module: 'MMM-homeassistant-sensors',
-		position: 'top_left',
-		config: {
-			host: "YOUR_HASS_HOST",
-			port: "8123",
-			https: false,
-			token: "YOUR_LONG_LIVED_HASS_TOKEN",
-			prettyName: false,
-			stripName: false,
-			debuglogging: false,
-			values: [{
-					sensor: "sensor.processor_use",
-					alertThreshold: 50,
-					icons: [{
-							"default": "chip"
-						}
-					]
-				}, {
-					sensor: "binary_sensor.sensor",
-					name: "Hallway Sensor",
-					icons: [{
-							"state_off": "run",
-							"state_on": "run-fast"
-						}
-					]
-				}, {
-					sensor: "switch.reception_spot",
-					icons: [{
-							"state_off": "lightbulb-outline",
-							"state_on": "lightbulb-on-outline"
-						}
-					]
-				}
-			]
-
-		}
-	}
-]
-```
+  values: [
+    {
+      sensor: "sensor.processor_use",
+      alertThreshold: 50,
+      icons: { "default": "chip" }
+    },
+    {
+      sensor: "binary_sensor.hallway_presence",
+      name: "Hallway Sensor",
+      map: { "off": "No Motion", "on": "Motion" },
+      icons: { "state_off": "run", "state_on": "run-fast" }
+    },
+    {
+      sensor: "switch.reception_spot",
+      icons: { "state_off": "lightbulb-outline", "state_on": "lightbulb-on-outline" }
+    }
+  ]
+}
 
 **Result** example:
 
@@ -102,5 +87,5 @@ modules: [{
 
 ## Special Thanks
 
-- [Michael Teeuw](https://github.com/MichMich) for creating the awesome [MagicMirror2](https://github.com/MichMich/MagicMirror/tree/develop) project that made this module possible.
-- [tkoeberl](https://github.com/tkoeberl) for creating the initial module that I used as guidance in creating this module.
+- [Michael Teeuw](https://github.com/MichMich) for creating the awesome [MagicMirror²](https://github.com/MichMich/MagicMirror/tree/develop) project that made this module possible.
+- Thanks to the community modules that inspired this fork and to everyone helping keep HA integrations current.
