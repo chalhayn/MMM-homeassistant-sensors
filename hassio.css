@@ -1,9 +1,32 @@
-.blink {
-  animation: blinker 3.5s linear infinite;
+/* Subtle, accessible "blink" for alert rows */
+:root {
+  --ha-blink-duration: 2.2s;        /* tweak speed */
+  --ha-blink-min-opacity: 0.35;     /* how dim it gets at peak blink */
+  --ha-blink-color: #ff5252;         /* accent color for alert rows */
 }
 
-@keyframes blinker {
+.mmm-ha-wrapper .blink {
+  animation: ha-blink var(--ha-blink-duration) ease-in-out infinite;
+  color: var(--ha-blink-color);
+}
+
+@keyframes ha-blink {
+  0%, 100% {
+    opacity: 1;
+    text-shadow: none;
+  }
   50% {
-    opacity: 0;
+    opacity: var(--ha-blink-min-opacity);
+    text-shadow: 0 0 6px rgba(255, 82, 82, 0.7);
+  }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .mmm-ha-wrapper .blink {
+    animation: none;
+    opacity: 1;
+    background-color: rgba(255, 82, 82, 0.12);
+    border-left: 3px solid var(--ha-blink-color);
   }
 }
