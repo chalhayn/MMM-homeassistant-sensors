@@ -4,7 +4,7 @@
 "use strict";
 
 const NodeHelper = require("node_helper");
-const fetch = require("node-fetch");          // v2 (CommonJS)
+const fetch = require("node-fetch");          // make sure v2 is installed: npm i node-fetch@2
 const http = require("http");
 const https = require("https");
 
@@ -19,6 +19,7 @@ module.exports = NodeHelper.create({
 
   async getStats(config) {
     const url = this.buildUrl(config);
+    this.log("getStats() called →", url);
 
     if (!config || !config.token) {
       const msg = "Missing Home Assistant long-lived access token";
@@ -27,12 +28,12 @@ module.exports = NodeHelper.create({
       return;
     }
 
-    // Allow self-signed if you set rejectUnauthorized: false in the module config
     const agent = config.https
       ? new https.Agent({ rejectUnauthorized: config.rejectUnauthorized !== false })
       : new http.Agent();
 
     try {
+      this.log("Fetching…", url);
       const res = await fetch(url, {
         agent,
         headers: {
@@ -41,6 +42,8 @@ module.exports = NodeHelper.create({
         },
         timeout: 10000
       });
+
+      this.log("HTTP status:", res.status, res.statusText);
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -51,6 +54,7 @@ module.exports = NodeHelper.create({
       }
 
       const body = await res.json();
+      this.log("Fetched entities:", Array.isArray(body) ? body.length : "(not array)");
       this.sendSocketNotification("STATS_RESULT", body);
     } catch (err) {
       const msg = err && err.message ? err.message : "Unknown error";
@@ -70,6 +74,7 @@ module.exports = NodeHelper.create({
 
   socketNotificationReceived(notification, payload) {
     if (notification === "GET_STATS") {
+      this.log(`socketNotificationReceived: GET_STATS (https=${!!payload.https})`);
       this.getStats(payload);
     }
   }
