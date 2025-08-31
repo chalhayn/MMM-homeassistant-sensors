@@ -47,12 +47,11 @@ Module.register("MMM-homeassistant-sensors", {
   },
 
   // ----- Styles -----
-  getStyles() {
-    // Ensure these paths exist in your module (or set displaySymbol:false).
-    return [
-      "modules/MMM-homeassistant-sensors/MDI/css/materialdesignicons.min.css",
-      "modules/MMM-homeassistant-sensors/hassio.css"
-    ];
+getStyles() {
+  return [
+    "modules/MMM-homeassistant-sensors/mdi/css/materialdesignicons.min.css",
+    "modules/MMM-homeassistant-sensors/hassio.css"
+  ];
   },
 
   // ----- Startup -----
