@@ -1,5 +1,6 @@
 /* MagicMirror² - MMM-homeassistant-sensors (front-end)
- * Token-auth compliant, with precision/map/unit overrides and robust logging
+ * Token-auth compliant, with precision/map/unit overrides, composite-value handling,
+ * and robust logging. Compatible with older Electron (no optional chaining).
  */
 "use strict";
 
@@ -21,15 +22,18 @@ Module.register("MMM-homeassistant-sensors", {
     prettyName: false,
     stripName: false,
     showUnit: true,
-    debuglogging: true,          // turn off when happy
+    debuglogging: false,         // turn on while debugging
+    // For self-signed HA certs when https:true (less secure):
+    // rejectUnauthorized: true,
     values: [
-      // Example item:
+      // Example:
       // {
       //   sensor: "sensor.living_room_temperature",
       //   name: "Living Room",
-      //   precision: 1,                     // format numeric state to N decimals
-      //   unitOverride: "°F",               // force a unit on screen
-      //   map: { on: "On", off: "Off" },    // map raw state strings to labels
+      //   attributes: [],                   // e.g., ["state"] or ["battery_level"]
+      //   precision: 1,                     // format numeric state to N decimals (accepts "1" or 1)
+      //   unitOverride: "°F",               // force unit on screen
+      //   map: { on: "On", off: "Off" },    // map states (per-piece if composite)
       //   icons: {
       //     default: "thermometer",
       //     state_on: "toggle-switch",
@@ -37,15 +41,14 @@ Module.register("MMM-homeassistant-sensors", {
       //     state_open: "door-open",
       //     state_closed: "door-closed"
       //   },
-      //   attributes: [],                   // e.g., ["battery_level"] or ["state"]
-      //   alertThreshold: 80                // row blinks if numeric value > threshold
+      //   alertThreshold: 80                // row blinks if FIRST numeric piece > threshold (accepts "80" or 80)
       // }
     ]
   },
 
   // ----- Styles -----
   getStyles() {
-    // Ensure these paths exist in your module, or set displaySymbol:false in your config.
+    // Ensure these paths exist in your module (or set displaySymbol:false).
     return [
       "modules/MMM-homeassistant-sensors/MaterialDesign-Webfont-master/css/materialdesignicons.min.css",
       "modules/MMM-homeassistant-sensors/hassio.css"
@@ -65,14 +68,14 @@ Module.register("MMM-homeassistant-sensors", {
   // ----- Logging helper -----
   _log() {
     if (!this.config.debuglogging) return;
-    const args = Array.prototype.slice.call(arguments);
+    var args = Array.prototype.slice.call(arguments);
     args.unshift("[MMM-homeassistant-sensors]");
     // eslint-disable-next-line no-console
     console.log.apply(console, args);
   },
 
   // ----- Utilities -----
-  _formatName(name) {
+  _formatName: function(name) {
     var out = name || "";
     if (this.config.stripName) {
       var parts = out.split(".");
@@ -80,24 +83,62 @@ Module.register("MMM-homeassistant-sensors", {
     }
     if (this.config.prettyName) {
       out = out.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/_/g, " ");
-      out = out.replace(/\w\S*/g, function (t) { return t.charAt(0).toUpperCase() + t.substr(1); });
+      out = out.replace(/\w\S*/g, function(t) { return t.charAt(0).toUpperCase() + t.substr(1); });
     }
     return out;
   },
 
-  _applyMap: function (val, map) {
-    if (!map || typeof map !== "object") return val;
-    var key = String(val).toLowerCase();
-    return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : val;
+  _splitPieces: function(val) {
+    // Split "a | b | c" or "a|b|c" into trimmed parts
+    if (val == null) return [];
+    var s = String(val);
+    if (s.indexOf("|") === -1) return [s.trim()];
+    return s.split("|").map(function(p){ return String(p).trim(); });
   },
 
-  _formatNumber: function (val, prec) {
-    if (typeof prec !== "number") return val;
-    var n = Number(val);
-    return Number.isFinite(n) ? n.toFixed(prec) : val;
+  _firstPiece: function(val) {
+    var parts = this._splitPieces(val);
+    return parts.length ? parts[0] : "";
   },
 
-  _getEntity(data, entityId) {
+  _parseNumeric: function(val) {
+    // Use FIRST numeric piece for blink/threshold/icon-state decisions
+    var first = this._firstPiece(val);
+    var n = Number(first);
+    return Number.isFinite(n) ? n : NaN;
+  },
+
+  _applyMap: function(val, map) {
+    // Map each piece; accept composite values
+    if (!map || typeof map !== "object" || val == null) return val;
+
+    var mapOne = function(s) {
+      var key = String(s).trim().toLowerCase();
+      return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : String(s).trim();
+    };
+
+    var s = String(val);
+    if (s.indexOf("|") === -1) return mapOne(s);
+    return s.split("|").map(mapOne).join(" | ");
+  },
+
+  _formatPrecision: function(val, prec) {
+    // Accept numeric or string precision (e.g., 1 or "1")
+    if (prec === undefined || prec === null) return val;
+    var p = Number(prec);
+    if (!Number.isFinite(p)) return val;
+
+    var formatOne = function(x) {
+      var n = Number(String(x).trim());
+      return Number.isFinite(n) ? n.toFixed(p) : String(x).trim();
+    };
+
+    var s = String(val);
+    if (s.indexOf("|") === -1) return formatOne(s);
+    return s.split("|").map(formatOne).join(" | ");
+  },
+
+  _getEntity: function(data, entityId) {
     if (!Array.isArray(data)) return null;
     for (var i = 0; i < data.length; i++) {
       if (data[i] && data[i].entity_id === entityId) return data[i];
@@ -105,7 +146,7 @@ Module.register("MMM-homeassistant-sensors", {
     return null;
   },
 
-  _getValue(data, entityId, attributes) {
+  _getValue: function(data, entityId, attributes) {
     attributes = attributes || [];
     var entity = this._getEntity(data, entityId);
     if (!entity) return null;
@@ -121,7 +162,7 @@ Module.register("MMM-homeassistant-sensors", {
     return pieces.join(" | ");
   },
 
-  _getUnit(data, entityId) {
+  _getUnit: function(data, entityId) {
     if (!this.config.showUnit) return "";
     var entity = this._getEntity(data, entityId);
     if (!entity || !entity.attributes) return "";
@@ -130,7 +171,7 @@ Module.register("MMM-homeassistant-sensors", {
       : "";
   },
 
-  _getFriendlyName(data, valueConfig) {
+  _getFriendlyName: function(data, valueConfig) {
     if (valueConfig && valueConfig.name) return valueConfig.name;
     var entity = this._getEntity(data, valueConfig.sensor);
     if (entity && entity.attributes && entity.attributes.friendly_name) {
@@ -139,9 +180,10 @@ Module.register("MMM-homeassistant-sensors", {
     return valueConfig.sensor || "Unknown";
   },
 
-  _resolveIcons(value, iconsConfig) {
+  _resolveIcons: function(value, iconsConfig) {
+    // Resolve icon using FIRST piece of the value (so "on | 72" → "on")
     if (!iconsConfig || typeof iconsConfig !== "object") return null;
-    var v = String(value).toLowerCase();
+    var v = String(this._firstPiece(value)).toLowerCase();
     var i = iconsConfig;
     if (v === "on" && typeof i.state_on === "string") return i.state_on;
     if (v === "off" && typeof i.state_off === "string") return i.state_off;
@@ -151,13 +193,18 @@ Module.register("MMM-homeassistant-sensors", {
     return null;
   },
 
-  _shouldBlink(value, alertThreshold) {
-    if (value === null || value === undefined) return false;
-    if (typeof alertThreshold === "number" && !Number.isNaN(alertThreshold)) {
-      var num = parseFloat(value);
-      return !Number.isNaN(num) && num > alertThreshold;
-    }
-    return false;
+  _shouldBlink: function(value, alertThreshold) {
+    if (alertThreshold === undefined || alertThreshold === null) return false;
+    var thr = Number(alertThreshold);
+    if (!Number.isFinite(thr)) return false;
+    var num = this._parseNumeric(value);
+    return Number.isFinite(num) && num > thr;
+  },
+
+  _isUnavailable: function(val) {
+    if (val == null) return true;
+    var s = String(val).toLowerCase();
+    return (s === "unknown" || s === "unavailable");
   },
 
   // ----- DOM -----
@@ -198,15 +245,16 @@ Module.register("MMM-homeassistant-sensors", {
         var nameRaw = this._getFriendlyName(this.result, cfg);
         var rawUnit = this._getUnit(this.result, cfg.sensor);
         var rawValue = this._getValue(this.result, cfg.sensor, cfg.attributes || []);
-        if (rawValue === null || rawValue === "unknown" || rawValue === "unavailable") continue;
+        if (this._isUnavailable(rawValue)) continue;
 
-        // blink based on raw numeric
+        // Blink uses FIRST numeric piece from the RAW value
         var blink = this._shouldBlink(rawValue, cfg.alertThreshold);
 
-        // format value → map → unit override
-        var displayValue = this._formatNumber(rawValue, cfg.precision);
-        displayValue = this._applyMap(displayValue, cfg.map);
+        // MAP first (per-piece), then apply PRECISION to each numeric piece
+        var mapped = this._applyMap(rawValue, cfg.map);
+        var displayValue = this._formatPrecision(mapped, cfg.precision);
 
+        // Units
         var displayUnit = this.config.showUnit ? rawUnit : "";
         if (cfg.unitOverride) displayUnit = cfg.unitOverride;
 
@@ -228,7 +276,7 @@ Module.register("MMM-homeassistant-sensors", {
         var name2 = this._formatName(fname);
 
         var val = ent.state;
-        if (val === "unknown" || val === "unavailable") continue;
+        if (this._isUnavailable(val)) continue;
 
         var unit2 = (ent.attributes && ent.attributes.unit_of_measurement)
           ? ent.attributes.unit_of_measurement
@@ -250,7 +298,7 @@ Module.register("MMM-homeassistant-sensors", {
     return wrapper;
   },
 
-  _buildRow(name, value, unit, mdiIconName, blink) {
+  _buildRow: function(name, value, unit, mdiIconName, blink) {
     var tr = document.createElement("tr");
     if (blink) tr.classList.add("blink");
 
@@ -281,7 +329,7 @@ Module.register("MMM-homeassistant-sensors", {
   },
 
   // ----- Scheduling -----
-  scheduleUpdate(delayMs) {
+  scheduleUpdate: function(delayMs) {
     var interval = (typeof delayMs === "number" && delayMs >= 0) ? delayMs : this.config.updateInterval;
     if (this.updateTimer) clearInterval(this.updateTimer);
     var self = this;
@@ -289,7 +337,7 @@ Module.register("MMM-homeassistant-sensors", {
   },
 
   // ----- IPC to node_helper -----
-  getStats() {
+  getStats: function() {
     var payload = {
       host: this.config.host,
       port: this.config.port,
@@ -298,11 +346,14 @@ Module.register("MMM-homeassistant-sensors", {
       values: this.config.values,
       debuglogging: !!this.config.debuglogging
     };
+    if (typeof this.config.rejectUnauthorized !== "undefined") {
+      payload.rejectUnauthorized = !!this.config.rejectUnauthorized;
+    }
     this._log("sending GET_STATS", payload.host, payload.port, payload.https);
     this.sendSocketNotification("GET_STATS", payload);
   },
 
-  socketNotificationReceived(notification, payload) {
+  socketNotificationReceived: function(notification, payload) {
     if (notification === "STATS_RESULT") {
       this._log("STATS_RESULT len=", Array.isArray(payload) ? payload.length : "n/a");
       this.lastError = null;
